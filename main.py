@@ -4,6 +4,7 @@ import PySimpleGUI as sg
 from datetime import date
 import time
 from pathlib import Path
+import statistics
 
 from PySimpleGUI.PySimpleGUI import theme
 # https://docs.python.org/3/library/configparser.html#quick-start
@@ -82,6 +83,7 @@ if __name__ == "__main__":
                         with open(listINI, 'a') as configfile:
                             config.write(configfile)
                         print("Created new Character!")
+                        window.Close()
                         return newCharacterName
                     else:
                         sg.popup_error("Invalid Name!", "Please don't use any special Characters.")
@@ -128,12 +130,14 @@ if __name__ == "__main__":
                     window.Hide()
                     characterName = ""
                     characterName = newChar()
+                    choices += [characterName]
+                    window.Element("charcombo").Update(values=choices)
                     window.UnHide()
                 elif characterName == "": # No character selected
                     pass
                 else:
                     window.Hide()
-                    #Load Chosen Character
+                    #Load chosen Character
                     config = configparser.ConfigParser()
                     listINI = charFolderPath + "\\CharacterList.ini"
                     config.read(listINI)
@@ -148,8 +152,8 @@ if __name__ == "__main__":
         layout = [
             [sg.Text('Loaded Character:', size=(13, 2)), sg.Text(str(chosenChar), size=(30, 2))],
             [sg.Text('Dice:', size=(6, 1)), sg.Text('Enter what you Rolled:', size=(16, 1)), sg.Text('Enter your modifier:', size=(16, 1))],
-            [sg.Combo(diceList, readonly=True, enable_events=True, key='chosenDice', size=(5, 1)), sg.InputText(key='input_roll', size=(19, 1)), sg.InputText(key='input_modifier', size=(19, 1))],
-            [sg.Button('Add'), sg.Exit()]
+            [sg.Combo(diceList, readonly=True, enable_events=True, key='chosenDice', size=(5, 1)), sg.InputText(key='input_roll', size=(19, 1)), sg.Combo(["+","-"], readonly=True, key='chosenModifier', size=(2,1)), sg.InputText(key='input_modifier', size=(19, 1))],
+            [sg.Button('Add'), sg.Button('Show Rolls'), sg.Exit()]
         ]
         window = sg.Window('Average Roll Calculator', layout)
 
@@ -160,36 +164,32 @@ if __name__ == "__main__":
 
             if event == "Show Rolls":
                 window.Hide()
-                #Do stuff in other window
+                showRollsGUI(chosenChar, GUITheme)
                 window.UnHide()
 
             if event == "Add":
                 #Check to see if everything is filled
-                if values["chosenDice"] != "" and values["input_roll"] != "" and values["input_modifier"] != "":
+                if values["chosenDice"] != "" and values["input_roll"] != "" and values["input_modifier"] != "" and values["chosenModifier"] != "":
                     # Check if everything is formatted in the right way
-                    rollFormat = "0123456789"
-                    modFormat = "0123456789+-"
-                    rollCheck = all(c in rollFormat for c in values["input_roll"])
-                    modCheck = all(c in modFormat for c in values["input_modifier"])
-                    if rollCheck == False or modCheck == False:
-                        sg.popup_ok('Average Roll Calculator', 'Wrong Format!', 'Please only use Digits and +/- for your modifiers')
+                    if str(values["input_roll"]).isdigit() and str(values["input_modifier"]).isdigit():
+                        if int(values["input_roll"]) <= int((values["chosenDice"])[1:]):
+                            modifier = values["chosenModifier"] + values["input_modifier"]
+                            # Add to charname.ini
+                            print(chosenChar)
+                            config = configparser.ConfigParser()
+                            charrollsini = charFolderPath + "\\" +  chosenChar + ".ini"
+                            config[str(int(time.time()))] = {'dice': values["chosenDice"],
+                                                        'rolled': values["input_roll"],
+                                                        'modifier': modifier}
+                            with open(charrollsini, 'a') as configfile:
+                                config.write(configfile)
+                            sg.popup_ok('Average Roll Calculator', 'Successfully added your roll!')
+                        else:
+                            sg.popup_error('Average Roll Calculator', 'Rolled higher than possible!')
                     else:
-                        # See if modifier has +/-, if not add a +
-                        if values["input_modifier"] != "*+" and values["input_modifier"] != "*-":
-                            modifier = "+" + values["input_modifier"]
-
-                        # Add to charname.ini
-                        print(chosenChar)
-                        config = configparser.ConfigParser()
-                        charrollsini = charFolderPath + "\\" +  chosenChar + ".ini"
-                        config[str(int(time.time()))] = {'dice': values["chosenDice"],
-                                                    'rolled': values["input_roll"],
-                                                    'modifier': modifier}
-                        with open(charrollsini, 'a') as configfile:
-                            config.write(configfile)
-                        sg.popup_ok('Average Roll Calculator', 'Successfully added your roll!')
+                        sg.popup_error('Average Roll Calculator', 'Wrong Format!', 'Please only input Digits!')
                 else:
-                    sg.popup_ok('Average Roll Calculator', 'Please fill in all the Fields before adding!')
+                    sg.popup_error('Average Roll Calculator', 'Please fill in all the Fields before adding!')
 
                 if event == 'input_roll' and values['input_roll'] and values['input_roll'][-1] not in ('0123456789'):
                     window['input_roll'].update(values['input_roll'][:-1])
@@ -200,21 +200,52 @@ if __name__ == "__main__":
         window.Close()
 
     def showRollsGUI(chosenChar, GUITheme="Default1"):
+        # Create GUI
         sg.theme(GUITheme)
         diceList = ["d4","d6","d8","d10","d12","d20","d100"]
         layout = [
-            [sg.Text('Loaded Character:', size=(13, 2)), sg.Text(str(chosenChar), size=(30, 2))],
+            [sg.Text('Loaded Character:', size=(13, 2)), sg.Text(str(chosenChar), size=(14, 2))],
             [sg.Text('Choosen Dice:', size=(13, 1)), sg.Combo(diceList, readonly=True, enable_events=True, key='chosenDice', size=(5, 1))],
+            [sg.Text('Average Rolled:', size=(13, 1)), sg.Text('', key='averageWithout', size=(5, 1))],
+            [sg.Text('With modifiers:', size=(13, 1)), sg.Text('', key='averageWit', size=(5, 1))],
             [sg.Text("Table of all Rolls with chosen dice: ", size=(30, 1))],
-            [sg.Listbox(values=['Welcome Drink', 'Extra Cushions', 'Organic Diet','Blanket', 'Neck Rest'], select_mode='extended', key='fac', size=(30, 6))],
-            [sg.Button('Add'), sg.Exit()]
+            [sg.Listbox(values=[], key='rollList', size=(30, 6))],
+            [sg.Exit()]
         ]
         window = sg.Window('Average Roll Calculator', layout)
 
         while True:
             event, values = window.Read()
             if event is None or event == 'Exit':
+                window.close()
                 break
+
+            if event == "chosenDice":
+                #Load chosen Characters rolls-file
+                config = configparser.ConfigParser()
+                charrollsini = charFolderPath + "\\" +  chosenChar + ".ini"
+                config.read(charrollsini)
+                #Read data with DiceRoll
+                print("Reading Data of: " + chosenChar)
+                newlist = []
+                averageWithout = []
+                averageWith = []
+                for each_section in config.sections():
+                    rollData = config.items(each_section)
+                    if rollData[0][1] == values["chosenDice"]:
+                        customString = str(rollData[1][1]) + " " + str(rollData[2][1])
+                        newlist += [customString]
+                        averageWithout += [int(rollData[1][1])]
+                        if "+" in rollData[2][1]:
+                            averageWith += [(int(rollData[1][1]) + int((rollData[2][1])[1:]))]
+                        else:
+                            averageWith += [(int(rollData[1][1]) - int((rollData[2][1])[1:]))]
+                #Show all Rolls
+                window.Element('rollList').Update(values=newlist)
+                #Show averages
+                if averageWithout != []:
+                    window.Element('averageWithout').Update(str(round(statistics.mean(averageWithout), 2)))
+                    window.Element('averageWit').Update(str(round(statistics.mean(averageWith), 2)))
 
     class main:
         chooseChar()
