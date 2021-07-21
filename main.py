@@ -71,7 +71,7 @@ if __name__ == "__main__":
             if event == 'Continue':
                 newCharacterName = values["input_name"]
                 if newCharacterName != "" and values["chosenTheme"] != "":
-                    if newCharacterName == "Exit" or newCharacterName == "CharData":
+                    if newCharacterName == "Exit" or newCharacterName == "CharData" or newCharacterName == "CharacterList":
                         sg.popup_error("Invalid Character Name!", "Please input another Name.")
                     elif all(x.isalpha() or x.isspace() or x.isdecimal() for x in newCharacterName):
                         # Add name to CharacterList.ini
@@ -119,21 +119,28 @@ if __name__ == "__main__":
             event, values = window.Read()
 
             if event is None or event == 'Exit':
-                return "Exit"
+                exit()
 
             if event == 'Continue':
                 characterName = values['charcombo']
                 characterName = str(characterName)
                 if characterName == "Add new Character":
-                    window.Close()
+                    window.Hide()
+                    characterName = ""
                     characterName = newChar()
+                    window.UnHide()
                 elif characterName == "": # No character selected
                     pass
                 else:
-                    break
-
-        window.Close()
-        return characterName
+                    window.Hide()
+                    #Load Chosen Character
+                    config = configparser.ConfigParser()
+                    listINI = charFolderPath + "\\CharacterList.ini"
+                    config.read(listINI)
+                    GUITheme = config[characterName]["theme"]
+                    print("Loaded: " + characterName)
+                    createMainGUI(characterName, GUITheme)
+                    window.UnHide()
     
     def createMainGUI(chosenChar, GUITheme="Default1"): # Work with the selected Character
         sg.theme(GUITheme)
@@ -150,6 +157,11 @@ if __name__ == "__main__":
             event, values = window.Read()
             if event is None or event == 'Exit':
                 break
+
+            if event == "Show Rolls":
+                window.Hide()
+                #Do stuff in other window
+                window.UnHide()
 
             if event == "Add":
                 #Check to see if everything is filled
@@ -187,15 +199,22 @@ if __name__ == "__main__":
 
         window.Close()
 
+    def showRollsGUI(chosenChar, GUITheme="Default1"):
+        sg.theme(GUITheme)
+        diceList = ["d4","d6","d8","d10","d12","d20","d100"]
+        layout = [
+            [sg.Text('Loaded Character:', size=(13, 2)), sg.Text(str(chosenChar), size=(30, 2))],
+            [sg.Text('Choosen Dice:', size=(13, 1)), sg.Combo(diceList, readonly=True, enable_events=True, key='chosenDice', size=(5, 1))],
+            [sg.Text("Table of all Rolls with chosen dice: ", size=(30, 1))],
+            [sg.Listbox(values=['Welcome Drink', 'Extra Cushions', 'Organic Diet','Blanket', 'Neck Rest'], select_mode='extended', key='fac', size=(30, 6))],
+            [sg.Button('Add'), sg.Exit()]
+        ]
+        window = sg.Window('Average Roll Calculator', layout)
+
+        while True:
+            event, values = window.Read()
+            if event is None or event == 'Exit':
+                break
+
     class main:
-        while chosenChar == "":
-            chosenChar = chooseChar()
-        if chosenChar == "Exit":
-            exit()
-        #Load Chosen Character
-        config = configparser.ConfigParser()
-        listINI = charFolderPath + "\\CharacterList.ini"
-        config.read(listINI)
-        GUITheme = config[chosenChar]["theme"]
-        print("Loaded: " + chosenChar)
-        createMainGUI(chosenChar, GUITheme)
+        chooseChar()
