@@ -37,13 +37,13 @@ if __name__ == "__main__":
         elif Theme == "Light Purple":
             return "LightPurple"
         else:
-            return "GrayGrayGray"
+            return "Default1"
 
-    def newChar(GUITheme="GrayGrayGray"): # Add a new Character
+    def newChar(GUITheme="Default1"): # Add a new Character
         print("Creating new Character...")
 
         # Create GUI
-        ogThemeList = ["DarkAmber","DarkRed2","DarkBlue12","DarkBrown4","LightGreen7","LightPurple","GrayGrayGray"]
+        ogThemeList = ["DarkAmber","DarkRed2","DarkBlue12","DarkBrown4","LightGreen7","LightPurple","Default1"]
         myThemeList = ["Dark Amber","Dark Red","Gray Blue","Black Red","Light Green","Light Purple","Default Gray"]
         sg.theme(GUITheme)
         layout = [
@@ -65,29 +65,34 @@ if __name__ == "__main__":
             if event == 'Preview':
                 # Get chosen Theme, and translate it to official name
                 sg.theme(convertThemes(values["chosenTheme"]))
-                sg.popup_no_wait('Here is your Theme preview!', 'You can continue by clicking the Ok Button.')
-                sg.theme("GrayGrayGray")
+                sg.popup_ok('Here is your Theme preview!', 'You can continue by clicking the Ok Button.')
+                sg.theme("Default1")
 
             if event == 'Continue':
                 newCharacterName = values["input_name"]
                 if newCharacterName != "" and values["chosenTheme"] != "":
-                    # Add name to CharacterList.ini
-                    config = configparser.ConfigParser()
-                    listINI = charFolderPath + "\\CharacterList.ini"
-                    config[newCharacterName] = {'created': thisDate,
-                                                'theme': convertThemes(values["chosenTheme"]),}
-                    with open(listINI, 'a') as configfile:
-                        config.write(configfile)
-                    print("Created new Character!")
-                    return newCharacterName
+                    if newCharacterName == "Exit" or newCharacterName == "CharData":
+                        sg.popup_error("Invalid Character Name!", "Please input another Name.")
+                    elif all(x.isalpha() or x.isspace() or x.isdecimal() for x in newCharacterName):
+                        # Add name to CharacterList.ini
+                        config = configparser.ConfigParser()
+                        listINI = charFolderPath + "\\CharacterList.ini"
+                        config[newCharacterName] = {'created': thisDate,
+                                                    'theme': convertThemes(values["chosenTheme"]),}
+                        with open(listINI, 'a') as configfile:
+                            config.write(configfile)
+                        print("Created new Character!")
+                        return newCharacterName
+                    else:
+                        sg.popup_error("Invalid Name!", "Please don't use any special Characters.")
                 elif newCharacterName == "":
-                    sg.popup_no_wait("Please choose your Character's Name!")
+                    sg.popup_error("Please choose your Character's Name!")
                     pass
                 elif values["chosenTheme"] == "":
-                    sg.popup_no_wait('Please choose a Theme!', 'You can Preview them with the "Preview Theme" button.')
+                    sg.popup_error('Please choose a Theme!', 'You can Preview them with the "Preview Theme" button.')
                     pass
         
-    def chooseChar(GUITheme="GrayGrayGray"): # Starting Menu to; Select a Character, or add a new One
+    def chooseChar(GUITheme="Default1"): # Starting Menu to; Select a Character, or add a new One
         choices = ["Add new Character"]
 
         # Get all characters
@@ -130,7 +135,7 @@ if __name__ == "__main__":
         window.Close()
         return characterName
     
-    def createMainGUI(chosenChar, GUITheme="GrayGrayGray"): # Work with the selected Character
+    def createMainGUI(chosenChar, GUITheme="Default1"): # Work with the selected Character
         sg.theme(GUITheme)
         diceList = ["d4","d6","d8","d10","d12","d20","d100"]
         layout = [
@@ -155,7 +160,7 @@ if __name__ == "__main__":
                     rollCheck = all(c in rollFormat for c in values["input_roll"])
                     modCheck = all(c in modFormat for c in values["input_modifier"])
                     if rollCheck == False or modCheck == False:
-                        sg.popup_no_wait('Average Roll Calculator', 'Wrong Format!', 'Please only use Digits and +/- for your modifiers')
+                        sg.popup_ok('Average Roll Calculator', 'Wrong Format!', 'Please only use Digits and +/- for your modifiers')
                     else:
                         # See if modifier has +/-, if not add a +
                         if values["input_modifier"] != "*+" and values["input_modifier"] != "*-":
@@ -170,9 +175,9 @@ if __name__ == "__main__":
                                                     'modifier': modifier}
                         with open(charrollsini, 'a') as configfile:
                             config.write(configfile)
-                        sg.popup_no_wait('Average Roll Calculator', 'Successfully added your roll!')
+                        sg.popup_ok('Average Roll Calculator', 'Successfully added your roll!')
                 else:
-                    sg.popup_no_wait('Average Roll Calculator', 'Please fill in all the Fields before adding!')
+                    sg.popup_ok('Average Roll Calculator', 'Please fill in all the Fields before adding!')
 
                 if event == 'input_roll' and values['input_roll'] and values['input_roll'][-1] not in ('0123456789'):
                     window['input_roll'].update(values['input_roll'][:-1])
